@@ -4,29 +4,19 @@ const pixelateButton = document.querySelector(".pixelate-btn");
 const canvas = document.querySelector(".canvas");
 
 const imageElementOriginal = document.querySelector(".original-img");
-let imgToPixelate = null;
+let imgSrcFile = null;
 
-class Range {
-    constructor(min, max){
-        this.max = max;
-        this.min = min;
-    }
+imageElementOriginal.onload = () =>  {
+    canvas.width = imageElementOriginal.width;
+    canvas.height = imageElementOriginal.height;
 }
-
-const handleInputFileChange = function(event){
-    imgToPixelate = event.target.files[0];
-    if(!imgToPixelate) return;
-    const onImageFilled = () => {
-        canvas.width = imageElementOriginal.width;
-        canvas.height = imageElementOriginal.height;
-    }
-    fillImageWithFile(imgToPixelate, imageElementOriginal, onImageFilled);
-}
-
 
 const handlePixelateButtonClick = function() {
-    if(!imgToPixelate) return;
-    
+    if(!imgSrcFile) return;
+
+    GetSrcOfImageFile(imgSrcFile, (src) => {
+        drawPixelatedImage(src, 25);
+    });
 };
 
 function transformImageData(imageData, size) {
@@ -37,7 +27,7 @@ function transformImageData(imageData, size) {
     for (let y = 0; y < height; y += size) {
         for (let x = 0; x < width; x += size) {
             const chunk = [];
-
+            
             // Iterate over the current chunk of pixels
             for (let j = y; j < y + size && j < height; j++) {
                 for (let i = x; i < x + size && i < width; i++) {
@@ -51,8 +41,15 @@ function transformImageData(imageData, size) {
                     chunk.push(pixel);
                 }
             }
+            
+            // Calculate chunk coordinates
+            const chunkData = {
+                x: x,
+                y: y,
+                pixels: chunk
+            };
 
-            chunks.push(chunk);
+            chunks.push(chunkData);
         }
     }
 
@@ -60,54 +57,72 @@ function transformImageData(imageData, size) {
 }
 
 
+
 const drawPixelatedImage = function(img, pixelSize){
     const imgElement = new Image();
-    imgElement.onload(function () {
+    imgElement.onload = function () {
         const canvasContext = canvas.getContext("2d");
-        canvas.width = imgElement.width;
-        canvas.height = imgElement.height;
-
-        canvasContext.drawImage(imgElement);
+        canvas.height = imageElementOriginal.height;
+        canvas.width = imageElementOriginal.width;
+        canvasContext.drawImage(imgElement, 0, 0, imageElementOriginal.width, imageElementOriginal.height);
         
         const wholeCanvasColorData = canvasContext.getImageData(0, 0, canvas.width, canvas.height);
-        const canvasColorDataFormatted = transformImageData(wholeCanvasColorData);
+        const canvasColorDataFormatted = transformImageData(wholeCanvasColorData, pixelSize);
         const newCanvasColorData = [];
 
         for(const chunk of canvasColorDataFormatted){
             const averageRgbOfChunk = {
+                x: chunk.x,
+                y: chunk.y,
                 r: 0,
                 g: 0,
                 b: 0,
             }
-            for(const pixel in chunk) {
+            
+            for(const pixel of chunk.pixels) {
                 averageRgbOfChunk.r += pixel.r;
                 averageRgbOfChunk.g += pixel.g;
                 averageRgbOfChunk.b += pixel.b;
             }
 
-            averageRgbOfChunk.r /= pixelSize;
-            averageRgbOfChunk.g /= pixelSize;
-            averageRgbOfChunk.b /= pixelSize;
+            averageRgbOfChunk.r /= pixelSize*pixelSize;
+            averageRgbOfChunk.g /= pixelSize*pixelSize;
+            averageRgbOfChunk.b /= pixelSize*pixelSize;
 
             newCanvasColorData.push(averageRgbOfChunk);
         }
 
-        
+        for(const averageChunk of newCanvasColorData) {
+            canvasContext.fillStyle = `rgb(${averageChunk.r}, ${averageChunk.g}, ${averageChunk.b})`;
+            canvasContext.fillRect(averageChunk.x, averageChunk.y, pixelSize, pixelSize);
+        }
+    };
 
-    });
     imgElement.src = img;
 }
 
-const fillImageWithFile = function(file, imgElement, onFinished){
+const handleInputFileChange = function(event){
+    imgSrcFile = event.target.files[0];
+    if (!imgSrcFile) return;
+
+    const onImageFilled = (src) => {
+        imageElementOriginal.src = src;
+    };
+
+    // Pass the file object and the image element to fillImageWithFile
+    GetSrcOfImageFile(imgSrcFile, onImageFilled);
+}
+
+const GetSrcOfImageFile = function(file, onFinished){
     const fileReader = new FileReader();
 
     fileReader.onload = function(e) {
-        imgElement.src = e.target.result;
-        onFinished?.();
-    }
+        onFinished?.(e.target.result);
+    };
 
-    fileReader.readAsDataURL(file);
+    fileReader.readAsDataURL(file); // Read the file as a data URL
 }
+
 
 inputFile.addEventListener("change", handleInputFileChange);
 pixelateButton.addEventListener("click",handlePixelateButtonClick);
