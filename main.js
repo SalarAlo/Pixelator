@@ -6,6 +6,8 @@ const canvas = document.querySelector(".canvas");
 const imageElementOriginal = document.querySelector(".original-img");
 let imgSrcFile = null;
 
+const PIXELATED_STRENGTH = 5;
+
 imageElementOriginal.onload = () =>  {
     canvas.width = imageElementOriginal.width;
     canvas.height = imageElementOriginal.height;
@@ -15,7 +17,7 @@ const handlePixelateButtonClick = function() {
     if(!imgSrcFile) return;
 
     GetSrcOfImageFile(imgSrcFile, (src) => {
-        drawPixelatedImage(src, 25);
+        drawPixelatedImage(src, PIXELATED_STRENGTH);
     });
 };
 
