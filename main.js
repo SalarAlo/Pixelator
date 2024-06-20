@@ -127,4 +127,4 @@ const GetSrcOfImageFile = function(file, onFinished){
 
 
 inputFile.addEventListener("change", handleInputFileChange);
-pixelateButton.addEventListener("click",handlePixelateButtonClick);
+pixelateButton.addEventListener("click", handlePixelateButtonClick);
